@@ -54,6 +54,16 @@
     text-align: center;
   }
   .resume .row { margin-top: 0.75rem; display: flex; gap: 0.5rem; justify-content: center; }
+  .options {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .options label { cursor: pointer; display: flex; align-items: center; gap: 0.4rem; }
+  .options input { cursor: pointer; accent-color: var(--accent); }
   button {
     background: var(--card-bg);
     color: var(--fg);
@@ -128,6 +138,10 @@
     <div>Click or drop a CSV file</div>
     <div class="hint">Two columns: front, back. Wrap math in <kbd>$...$</kbd>.</div>
   </label>
+  <div class="options">
+    <label><input type="radio" name="order" value="ordered" checked> In file order</label>
+    <label><input type="radio" name="order" value="shuffled"> Shuffled</label>
+  </div>
   <div id="resume" class="resume" style="display:none;"></div>
 </div>
 
@@ -182,7 +196,31 @@ function parseCSV(text) {
   if (field.length || row.length) { row.push(field); rows.push(row); }
   return rows
     .filter(r => r.length >= 2 && (r[0].trim() || r[1].trim()))
-    .map(r => ({ front: r[0].trim(), back: r[1].trim() }));
+    .map(r => ({ front: unescapeText(r[0].trim()), back: unescapeText(r[1].trim()) }));
+}
+
+// Convert \n / \t escapes to real characters, but leave math regions ($...$, $$...$$)
+// untouched so LaTeX commands like \nabla, \neq, \tau survive.
+function unescapeText(text) {
+  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) return part;
+    return part.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  }).join('');
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function selectedOrder() {
+  const el = document.querySelector('input[name="order"]:checked');
+  return el ? el.value : 'ordered';
 }
 
 // --- State ---
@@ -291,14 +329,19 @@ function buildResumePrompt(name, savedCards, freshCards) {
   el.append(line, row);
 }
 
+function orderedCards(cards) {
+  return selectedOrder() === 'shuffled' ? shuffle(cards) : cards;
+}
+
 function loadFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const cards = parseCSV(e.target.result);
     if (!cards.length) { alert('No cards found in file.'); return; }
+    const fresh = orderedCards(cards);
     const saved = loadSaved(file.name);
-    if (saved && saved.length) buildResumePrompt(file.name, saved, cards);
-    else startSession(cards, file.name);
+    if (saved && saved.length) buildResumePrompt(file.name, saved, fresh);
+    else startSession(fresh, file.name);
   };
   reader.readAsText(file);
 }
