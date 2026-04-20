@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>gocards</title>
+<title>flashcards</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
@@ -132,7 +132,7 @@
 <body>
 
 <div id="start" class="screen active">
-  <h1>gocards</h1>
+  <h1>flashcards</h1>
   <label class="picker" id="picker">
     <input type="file" id="file-input" accept=".csv,.txt,text/csv,text/plain">
     <div>Click or drop a CSV file</div>
@@ -235,7 +235,7 @@ function show(id) {
 }
 
 // --- Persistence (per deck filename) ---
-const key = (name) => `gocards:${name}`;
+const key = (name) => `flashcards:${name}`;
 function save() {
   if (queue.length) localStorage.setItem(key(deckName), JSON.stringify(queue));
   else localStorage.removeItem(key(deckName));
