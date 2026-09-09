@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """flashcards — a tiny Tkinter deck runner.
 
-Load a two-column CSV (front, back) and drill it. Cards you miss get
-re-inserted a few positions later; progress is saved per deck filename so an
-interrupted session can be resumed.
+Loads a two-column CSV of flashcards. Cards you miss get re-inserted a few positions later. Progress is saved for each deck based on filename.
 
-Math wrapped in $...$ / $$...$$ is typeset when matplotlib is installed, and
-falls back to the literal source when it isn't.
+Math wrapped in $...$ / $$...$$ is typeset with matplotlib.
 
 Usage:
     uv run flashcards [deck.csv]      # inside this project
-    python3 flashcards.py [deck.csv]  # standalone, stdlib only
+    python3 flashcards.py [deck.csv]  # stdlib only
 """
 
 from __future__ import annotations
@@ -25,8 +22,6 @@ import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
-
-# --- Tuning -----------------------------------------------------------------
 
 MIN_GAP = 5
 MAX_GAP = 10
@@ -46,12 +41,7 @@ CARD_SIZE = 17
 MATH_RE = re.compile(r"(\$\$[\s\S]*?\$\$|\$[^$]*?\$)")
 
 
-# --- Drag and drop (optional) -----------------------------------------------
-
-# Importing tkinterdnd2 patches drop_target_register()/dnd_bind() onto every
-# tkinter widget, so the normal tk.Tk root is enough — its TkinterDnD.Tk
-# subclass is deliberately not used, because that one raises during __init__
-# when the tkdnd binary won't load and would take the whole app down with it.
+# TKinderDND fuckery
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
 except Exception:
@@ -62,9 +52,7 @@ except Exception:
 def enable_dnd(root) -> bool:
     """Load the tkdnd Tcl extension into an existing root.
 
-    Returns False when tkinterdnd2 is missing, or when it ships no tkdnd binary
-    for this platform and Tcl version (notably Intel macOS under Tcl 9, where
-    only the Tcl 8.x build exists). The picker stays clickable either way.
+    Returns False when tkinterdnd2 is missing or doesn't ship a binary for the platform
     """
     if TkinterDnD is None:
         return False
@@ -73,10 +61,6 @@ def enable_dnd(root) -> bool:
         return True
     except Exception:
         return False
-
-
-# --- CSV parsing ------------------------------------------------------------
-
 
 def parse_csv(path: Path) -> list[dict[str, str]]:
     """Read a deck. Rows need at least two columns; blank rows are dropped."""
@@ -113,15 +97,14 @@ def segments(text: str):
             yield "text", part, False
 
 
-# --- Math rendering (optional) ----------------------------------------------
 
 _math_cache: dict[tuple[str, bool], object] = {}
-_mathtext = None          # the matplotlib entry points, once imported
+_mathtext = None          # for matplotlib
 _math_available: bool | None = None
 
 
 def _load_mathtext():
-    """Import matplotlib once. Returns None if it isn't installed."""
+    """Import matplotlib and return None if it isn't installed."""
     global _mathtext, _math_available
     if _math_available is not None:
         return _mathtext
@@ -141,10 +124,7 @@ def _load_mathtext():
 def render_math(latex: str, display: bool):
     """Render a math fragment to a PhotoImage.
 
-    Returns None when matplotlib is missing or the fragment won't parse; the
-    caller then falls back to showing the literal source. A single unparseable
-    formula must not disable math for the rest of the session, so failures here
-    are kept separate from matplotlib's availability.
+    Returns None when matplotlib is missing or the fragment won't parse, whereupon the caller falls back to showing the literal source. 
     """
     loaded = _load_mathtext()
     if loaded is None:
@@ -168,10 +148,6 @@ def render_math(latex: str, display: bool):
         return None
     _math_cache[key] = image
     return image
-
-
-# --- Progress persistence ---------------------------------------------------
-
 
 def store_path() -> Path:
     if sys.platform == "darwin":
@@ -217,11 +193,8 @@ def load_progress(deck: str) -> list[dict[str, str]]:
     return [c for c in saved if isinstance(c, dict) and "front" in c and "back" in c]
 
 
-# --- Widgets ----------------------------------------------------------------
-
 
 class Button(tk.Frame):
-    """Tk's native button ignores colours on macOS, so roll a flat one."""
 
     def __init__(self, master, text, command, colour=FG, border=BORDER, pad=(14, 8)):
         super().__init__(master, bg=CARD_BG, highlightthickness=1,
@@ -262,7 +235,6 @@ class Button(tk.Frame):
 
 
 class Toggle(tk.Frame):
-    """Two-option segmented control, standing in for a radio group."""
 
     def __init__(self, master, options, on_change=None):
         super().__init__(master, bg=BG)
@@ -288,8 +260,6 @@ class Toggle(tk.Frame):
             btn.border = ACCENT if active else BORDER
             btn._leave()
 
-
-# --- App --------------------------------------------------------------------
 
 
 class App(tk.Tk):
@@ -325,8 +295,6 @@ class App(tk.Tk):
 
         if initial:
             self.after(50, lambda: self.open_deck(initial))
-
-    # -- screens
 
     def show(self, name):
         self.current = name
@@ -416,8 +384,6 @@ class App(tk.Tk):
                  font=(UI_FONT, 22)).grid(row=1, column=0, pady=(0, 24))
         Button(root, "Load another deck", self.back_to_start).grid(row=2, column=0)
 
-    # -- deck loading
-
     def _picker_lit(self, _event=None):
         self._picker.configure(highlightbackground=ACCENT, highlightcolor=ACCENT)
 
@@ -425,8 +391,7 @@ class App(tk.Tk):
         self._picker.configure(highlightbackground=BORDER, highlightcolor=BORDER)
 
     def _on_drop(self, event):
-        """Handle a file dropped on the picker. event.data is a Tcl list, so
-        splitlist unpacks paths containing spaces correctly."""
+        """Handle a file dropped on the picker."""
         self._picker_dim()
         paths = self.tk.splitlist(event.data)
         if paths:
@@ -485,8 +450,6 @@ class App(tk.Tk):
         self.resume.grid_remove()
         self.show("start")
 
-    # -- card rendering
-
     def render(self):
         if not self.queue:
             save_progress(self.deck, [])
@@ -510,7 +473,7 @@ class App(tk.Tk):
             return
         self.revealed = True
         self.text.configure(state="normal")
-        # Drop the "press Space" hint, then append the back of the card.
+        # show the "press Space" hint, then append the back of the card
         hint = self.text.tag_ranges("hint")
         if hint:
             self.text.delete(hint[0], hint[1])
@@ -546,8 +509,6 @@ class App(tk.Tk):
             self.queue.insert(min(gap, len(self.queue)), card)
         save_progress(self.deck, self.queue)
         self.render()
-
-    # -- keys
 
     def _on_key(self, event):
         if self.current != "study":
