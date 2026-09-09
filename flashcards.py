@@ -41,27 +41,6 @@ CARD_SIZE = 17
 MATH_RE = re.compile(r"(\$\$[\s\S]*?\$\$|\$[^$]*?\$)")
 
 
-# TKinderDND fuckery
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
-except Exception:
-    DND_FILES = None
-    TkinterDnD = None
-
-
-def enable_dnd(root) -> bool:
-    """Load the tkdnd Tcl extension into an existing root.
-
-    Returns False when tkinterdnd2 is missing or doesn't ship a binary for the platform
-    """
-    if TkinterDnD is None:
-        return False
-    try:
-        root.TkdndVersion = TkinterDnD._require(root)
-        return True
-    except Exception:
-        return False
-
 def parse_csv(path: Path) -> list[dict[str, str]]:
     """Read a deck. Rows need at least two columns; blank rows are dropped."""
     with open(path, newline="", encoding="utf-8-sig") as fh:
@@ -78,8 +57,6 @@ def parse_csv(path: Path) -> list[dict[str, str]]:
 
 
 def unescape(text: str) -> str:
-    """Turn \\n / \\t into real characters, leaving math regions alone so that
-    LaTeX commands like \\nabla, \\neq and \\tau survive."""
     parts = MATH_RE.split(text)
     for i, part in enumerate(parts):
         if i % 2 == 0:
@@ -270,7 +247,6 @@ class App(tk.Tk):
         self.geometry("760x620")
         self.minsize(520, 480)
 
-        self.dnd = enable_dnd(self)
         self.queue: list[dict[str, str]] = []
         self.deck = ""
         self.revealed = False
@@ -313,25 +289,21 @@ class App(tk.Tk):
         picker.grid(row=2, column=0, sticky="ew")
         inner = tk.Frame(picker, bg=BG)
         inner.pack(pady=42)
-        prompt = ("Click or drop a CSV file" if self.dnd
-                  else "Click to choose a CSV file")
-        tk.Label(inner, text=prompt, bg=BG, fg=FG, font=(UI_FONT, 14)).pack()
+        tk.Label(inner, text="Click to choose a CSV file", bg=BG, fg=FG,
+                 font=(UI_FONT, 14)).pack()
         tk.Label(inner, text="Two columns: front, back.   Wrap math in $...$",
                  bg=BG, fg=MUTED, font=(UI_FONT, 11)).pack(pady=(8, 0))
 
-        self._picker = picker
-        targets = (picker, inner, *inner.winfo_children())
-        for widget in targets:
-            widget.bind("<Button-1>", lambda _e: self.choose_file())
-            widget.bind("<Enter>", self._picker_lit)
-            widget.bind("<Leave>", self._picker_dim)
+        def lit(_event=None):
+            picker.configure(highlightbackground=ACCENT, highlightcolor=ACCENT)
 
-        if self.dnd:
-            for widget in targets:
-                widget.drop_target_register(DND_FILES)
-                widget.dnd_bind("<<DropEnter>>", self._picker_lit)
-                widget.dnd_bind("<<DropLeave>>", self._picker_dim)
-                widget.dnd_bind("<<Drop>>", self._on_drop)
+        def dim(_event=None):
+            picker.configure(highlightbackground=BORDER, highlightcolor=BORDER)
+
+        for widget in (picker, inner, *inner.winfo_children()):
+            widget.bind("<Button-1>", lambda _e: self.choose_file())
+            widget.bind("<Enter>", lit)
+            widget.bind("<Leave>", dim)
 
         self.order = Toggle(root, [("ordered", "In file order"),
                                    ("shuffled", "Shuffled")])
@@ -383,19 +355,6 @@ class App(tk.Tk):
         tk.Label(root, text="Session complete", bg=BG, fg=FG,
                  font=(UI_FONT, 22)).grid(row=1, column=0, pady=(0, 24))
         Button(root, "Load another deck", self.back_to_start).grid(row=2, column=0)
-
-    def _picker_lit(self, _event=None):
-        self._picker.configure(highlightbackground=ACCENT, highlightcolor=ACCENT)
-
-    def _picker_dim(self, _event=None):
-        self._picker.configure(highlightbackground=BORDER, highlightcolor=BORDER)
-
-    def _on_drop(self, event):
-        """Handle a file dropped on the picker."""
-        self._picker_dim()
-        paths = self.tk.splitlist(event.data)
-        if paths:
-            self.open_deck(Path(paths[0]))
 
     def choose_file(self):
         path = filedialog.askopenfilename(

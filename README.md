@@ -21,14 +21,14 @@ tabs:
 "Multi-line\nquestion","Answer"
 ```
 
-Text wrapped in `$...$` is typeset as inline math and `$$...$$` as display math. Escape sequences are left alone inside math, so LaTeX commands such as `\nabla`, `\neq` and `\tau` should work.
+Text wrapped in `$...$` is typeset as inline math and `$$...$$` as display math. 
 
 ## Studying
 
 | Key | Action |
 | --- | --- |
 | `Space` / `Enter` / click | Reveals the back of the card |
-| `y` | Removes the card from the queue |
+| `y` | Removes the card from the session deck |
 | `n` | Adds the card back to the queue |
 | `Esc` | Back to the deck picker |
 
@@ -42,12 +42,8 @@ The remaining queue is saved after every answer, so you can resume closed sessio
 - Linux — `$XDG_DATA_HOME/flashcards/progress.json`
 - Windows — `%APPDATA%\flashcards\progress.json`
 
-## Drag and drop
-
-Dropping a CSV on the picker needs the `tkdnd` Tcl extension, which `tkinterdnd2` ships as a prebuilt binary per platform *and per Tcl major version*, so it might not work on your machine. File menu should be fine though.
-
 ## Requirements
 
 Python 3.12+ with Tkinter
-
-> Note: uv's standalone Python 3.14 builds ship no Tkinter at all, so use 3.12 or 3.13.
+ 
+For some reason uv's standalone Python 3.14 builds ship no Tkinter at all, so use 3.12 or 3.13.
