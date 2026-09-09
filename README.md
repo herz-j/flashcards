@@ -27,9 +27,9 @@ Text wrapped in `$...$` is typeset as inline math and `$$...$$` as display math.
 
 | Key | Action |
 | --- | --- |
-| `Space` / `Enter` / click | Reveal the back of the card |
-| `y` | Got it — the card leaves the queue |
-| `n` | Again — the card returns 5–10 cards later |
+| `Space` / `Enter` / click | Reveals the back of the card |
+| `y` | Removes the card from the queue |
+| `n` | Adds the card back to the queue |
 | `Esc` | Back to the deck picker |
 
 Decks can be taken in file order or shuffled.
